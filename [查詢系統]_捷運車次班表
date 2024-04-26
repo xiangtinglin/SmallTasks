@@ -1,0 +1,76 @@
+import pandas as pd
+from datetime import datetime, timedelta
+import random
+
+def simulate_trains(n, t):
+    # 初始化停車庫（LIFO）
+    garage = list(range(1, n+1))
+    
+    # 發車時間間隔
+    departure_interval = timedelta(minutes=t)
+    
+    # 發車和回車記錄
+    records = []
+    
+    # 初始化時間
+    current_time = datetime.strptime("07:00", "%H:%M")
+    end_time = datetime.strptime("23:00", "%H:%M")
+    
+    # 日程安排
+    schedule = []
+    
+    # 當天發車直到23:00
+    while current_time <= end_time:
+        if garage:
+            # 從停車庫發車
+            train_id = garage.pop()
+            departure_time = current_time
+            p = random.randint(50, 50 + round(t/2))
+            return_time = current_time + timedelta(minutes=p)
+            
+            # 如果發車時間和回車時間相同，先執行發車再執行回車
+            if return_time == departure_time:
+                garage.append(train_id)  # 先將車輛返回停車庫
+                records.append({"車號": train_id, "發車時間": departure_time.strftime("%H:%M"), "回車時間": return_time.strftime("%H:%M")})
+            else:
+                # 加入回車日程
+                schedule.append((train_id, return_time))
+                records.append({"車號": train_id, "發車時間": departure_time.strftime("%H:%M"), "回車時間": return_time.strftime("%H:%M")})
+            
+            # 更新當前時間
+            current_time += departure_interval
+        
+        # 處理回車
+        schedule.sort(key=lambda x: x[1])  # 按回車時間排序
+        while schedule and schedule[0][1] <= current_time:
+            train_id, _ = schedule.pop(0)
+            garage.append(train_id)  # 車輛返回停車庫
+
+    # 處理下班後的回車
+    while schedule:
+        train_id, _ = schedule.pop(0)
+        garage.append(train_id)  # 車輛返回停車庫
+    
+    return garage, records
+
+print("【捷運電車車次查詢系統】北投-大安線")
+# 使用者輸入
+while True:
+  try:
+    n = int(input("[Step1].請輸入車庫的電車數目n台(1<=n<=100): "))
+    t = int(input("[Step2].請輸入發車間隔時間t分鐘(t>10分鐘): "))
+    if 1<=n<=100 and t > 10:
+      break
+    else:
+      print("(error:檢查車庫的電車數目&發車間隔時間是否符合規定)\n")
+  except ValueError:
+      print("(error:請輸入有效的整數值。)\n")
+
+# 模擬並獲取結果
+final_garage, trip_records = simulate_trains(n, t)
+
+# 輸出結果
+print("\n-----查詢結果-----\n#車庫中最後的車號狀況：", final_garage)
+print("#當天電車執勤的順序：", [record["車號"] for record in trip_records],"\n")
+df = pd.DataFrame(trip_records)
+df
